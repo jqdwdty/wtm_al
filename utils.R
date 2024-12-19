@@ -795,6 +795,11 @@ get_page_insights <- function(pageid, timeframe = "LAST_30_DAYS", lang = "en-GB"
                               iso2c = "US", include_info = c("page_info", "targeting_info"),
                               join_info = T, max_consecutive_errors = 5) 
 {
+  # Terminate R session if the maximum error count is reached
+  if (consecutive_error_count >= max_consecutive_errors) {
+    message("Max consecutive errors reached. Exiting session.")
+    return(tibble())
+  }
   ua_list <- c("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.82 Safari/537.36",
                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36")
