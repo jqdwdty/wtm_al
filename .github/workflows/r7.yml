@@ -80,7 +80,7 @@ jobs:
           remotes::install_github('hadley/emo')
         shell: Rscript {0}
       - name: "Script - Run"
-        run: Rscript 'get_audiences.R' 7
+        run: Rscript 'get_audiences.R' 7 "AL"
       - name: "Commit"
         uses: stefanzweifel/git-auto-commit-action@v4
         with:
