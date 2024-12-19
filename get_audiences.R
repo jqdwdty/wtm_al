@@ -8,6 +8,7 @@ try({
   }
   
   
+  
   outcome <- commandArgs(trailingOnly = TRUE)
   
   sets <- list()
@@ -34,6 +35,7 @@ try({
   library(jsonlite)
   
   
+  saveRDS(runif(1), file = "proxy.rds")
   
   
   Sys.setenv(LIBARROW_MINIMAL = "false")
