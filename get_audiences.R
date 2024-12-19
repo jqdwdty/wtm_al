@@ -1,6 +1,12 @@
 # Get command-line arguments
 # tf <- commandArgs(trailingOnly = TRUE)
 # rate_limit <<- F
+
+# library(metatargetr)
+# 
+# get_ad_snapshots("3107592112807842", download = T, hashing = T, mediadir = "data/media")
+
+
 try({
   
   if (!(Sys.info()[["effective_user"]] %in% c("fabio", "favstats"))) {
