@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: write
     env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_PAT: ${{ secrets.GH_PAT }}
     steps:
       - uses: quarto-dev/quarto-actions/setup@v2
       - name: Add Quarto to PATH
