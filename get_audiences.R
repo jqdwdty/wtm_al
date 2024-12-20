@@ -91,8 +91,8 @@ try({
   
   if (Sys.info()[["effective_user"]] %in% c("fabio", "favstats")) {
     ### CHANGE ME WHEN LOCAL!
-    tf <- "7"
-    the_cntry <- "GB"
+    tf <- "30"
+    the_cntry <- "US"
     print(paste0("TF: ", tf))
     print(paste0("cntry: ", sets))
     
@@ -284,7 +284,11 @@ try({
             thosearethere$ds[1],
             ".parquet"
           )
-        )
+        ) 
+      
+      if("no_data" %in% names(latest_elex)){
+        latest_elex <- latest_elex %>% filter(is.na(no_data))
+      }
     })
     
     if (!exists("latest_elex")) {
