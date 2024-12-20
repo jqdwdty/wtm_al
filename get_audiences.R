@@ -413,7 +413,7 @@ try({
   
   scraper <- function(internal, time = tf) {
     
-    if((which(scrape_dat$page_id == internal$page_id) %% round(nrow(scrape_dat)/4, -1)) == 0){
+    if((which(scrape_dat$page_id == internal$page_id) %% round(nrow(scrape_dat)/50, -1)) == 0){
       
       print(paste0(internal$page_name,": ", round(which(scrape_dat$page_id == internal$page_id)/nrow(scrape_dat)*100, 2)))
       
@@ -447,7 +447,13 @@ try({
         mutate(tstamp = tstamp)
     }
     
-    # print(nrow(fin))
+    
+    
+    # if (Sys.info()[["effective_user"]] %in% c("fabio", "favstats")) {
+      ### CHANGE ME WHEN LOCAL!
+      print(nrow(fin))
+      
+    # }# 
     # })
     return(fin)
     
