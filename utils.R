@@ -797,7 +797,7 @@ get_page_insights <- function(pageid, timeframe = "LAST_30_DAYS", lang = "en-GB"
 {
   # Terminate R session if the maximum error count is reached
   if (consecutive_error_count >= max_consecutive_errors) {
-    message("Max consecutive errors reached. Exiting session.")
+    # message("Max consecutive errors reached. Exiting session.")
     return(tibble())
   }
   ua_list <- c("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3",
@@ -826,12 +826,7 @@ get_page_insights <- function(pageid, timeframe = "LAST_30_DAYS", lang = "en-GB"
     message(sprintf("Encountered error %d/%d: %s", 
                     consecutive_error_count, max_consecutive_errors, 
                     out[[1]][["errors"]][["description"]]))
-    
-    # Terminate R session if the maximum error count is reached
-    if (consecutive_error_count >= max_consecutive_errors) {
-      message("Max consecutive errors reached. Exiting session.")
-      return(tibble())
-    }
+  
     
     # Return early or continue logic if needed
     return(NULL)
@@ -924,6 +919,10 @@ get_page_insights <- function(pageid, timeframe = "LAST_30_DAYS", lang = "en-GB"
   else if ("targeting_info" %in% include_info) {
     return(targeting_info)
   }
+  
+  assign("consecutive_error_count", 0, envir = .GlobalEnv)
+  
+  
   return(fin)
 }
 
