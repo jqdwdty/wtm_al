@@ -212,7 +212,7 @@ try({
     get_page_insights(togetstuff$page_id[1], timeframe = glue::glue("LAST_90_DAYS"), include_info = "targeting_info")
   
   new_ds <- jb %>% arrange(ds) %>% slice(1) %>% pull(ds)
-  # new_ds <- "2023-01-01"
+  new_ds <- "2000-01-01"
   
   print("################ LATEST TARGETING DATA ################")
   
