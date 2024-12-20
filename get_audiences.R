@@ -272,6 +272,7 @@ try({
       drop_na(ds) %>%
       arrange(desc(ds))
     
+    
     try({
       latest_elex <-
         arrow::read_parquet(
