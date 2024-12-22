@@ -583,7 +583,7 @@ pb_upload_file_fr <- function (file, repo, tag, .token = gh::gh_token(), release
       httr::warn_for_status(rsd)
       # invisible(rsd)
       
-      return(NULL)
+      return(rsd)
       
     }
     

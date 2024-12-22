@@ -8,13 +8,7 @@
 
 
 try({
-  
-  if (!(Sys.info()[["effective_user"]] %in% c("fabio", "favstats"))) {
-    remove.packages("arrow")
-  }
-  
-  
-  
+
   outcome <- commandArgs(trailingOnly = TRUE)
   
   sets <- list()
@@ -44,55 +38,7 @@ try({
   saveRDS(runif(1), file = "proxy.rds")
   
   
-  Sys.setenv(LIBARROW_MINIMAL = "false")
-  Sys.setenv("NOT_CRAN" = "true")
-  
-  print("##### please install arrow #####")
-  
-  options(
-    HTTPUserAgent =
-      sprintf(
-        "R/%s R (%s)",
-        getRversion(),
-        paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])
-      )
-  )
-  if (!(Sys.info()[["effective_user"]] %in% c("fabio", "favstats"))) {
-    # Comprehensive quiet installation for both package and Arrow bindings
-    quiet_install_arrow <- function() {
-      tryCatch({
-        # Suppress output for package installation
-        suppressMessages(
-          suppressWarnings(
-            install.packages(
-              "arrow", 
-              repos = "https://packagemanager.rstudio.com/all/__linux__/focal/latest", 
-              quiet = TRUE
-            )
-          )
-        )
-        message("✅ 'arrow' package installed successfully.")
-        
-        # Suppress output for Arrow bindings installation
-        invisible(
-          capture.output(
-            suppressMessages(
-              suppressWarnings(
-                arrow::install_arrow(verbose = FALSE)
-              )
-            ),
-            file = "/dev/null"
-          )
-        )
-        message("✅ Arrow bindings installed successfully.")
-      }, error = function(e) {
-        message(glue::glue("❌ Error during installation: {e$message}"))
-      })
-    }
-    
-    # Run the installation process
-    quiet_install_arrow()
-  }
+
   # print(arrow::arrow_info())
   # print("##### did you install arrow? #####")
   
@@ -674,7 +620,9 @@ try({
         releases = releases
       )
       # pb_upload_file_fr(paste0(the_date, ".zip"), repo = "favstats/meta_ad_reports", tag = the_tag, releases = full_repos)
-      the_status_code <- httr::status_code(rsd)
+      try({
+        the_status_code <- httr::status_code(rsd)
+      })
     })
     
     print(paste0("################ UPLOADED FILE ################: ", the_cntry))
@@ -724,6 +672,11 @@ if(!exists("new_elex")){
 if(!exists("the_rows_to_be_checked")){
   the_rows_to_be_checked <- tibble()
 } 
+
+if(!exists("the_status_code")){
+  the_status_code <- "no status code"
+} 
+
 
 election_dat <- election_dat %>% filter(is.na(no_data))
 

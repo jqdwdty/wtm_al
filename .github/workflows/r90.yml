@@ -79,5 +79,7 @@ jobs:
         run: |
           remotes::install_github('hadley/emo')
         shell: Rscript {0}
+      - name: "Install arrow"
+        run: Rscript 'arrow.R'
       - name: "Script - Run"
         run: Rscript 'get_audiences.R' 90 "AL"
