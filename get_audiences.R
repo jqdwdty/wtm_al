@@ -94,6 +94,7 @@ try({
       })
     
     
+    
     latest <- out  %>%
       rename(tag = release,
              file_name = filename) %>%
@@ -106,21 +107,32 @@ try({
       ) %>%
       filter(str_detect(file_name, "rds")) %>%
       mutate(day  = str_remove(file_name, "\\.rds|\\.zip|\\.parquet") %>% lubridate::ymd()) %>%
-      arrange(desc(day)) %>%
-      group_by(country, timeframe) %>%
-      slice(1) %>%
-      ungroup()
+      arrange(desc(day)) #%>%
+      # group_by(country, timeframe) %>%
+      # slice(1) %>%
+      # ungroup()
     
+
+      
+      then_this <- latest %>%
+        group_by(country, timeframe) %>%
+        slice(1) %>%
+        ungroup() %>% 
+        filter(str_detect(timeframe, "last_90_days"))
+        
+      
+      download.file(
+        paste0(
+          "https://github.com/favstats/meta_ad_reports/releases/download/",
+          the_cntry,
+          "-last_90_days/",
+          then_this$file_name
+        ),
+        destfile = "report.rds"
+      )      
+
     
-    download.file(
-      paste0(
-        "https://github.com/favstats/meta_ad_reports/releases/download/",
-        the_cntry,
-        "-last_90_days/",
-        latest$file_name
-      ),
-      destfile = "report.rds"
-    )
+
     
     last7 <- readRDS("report.rds") %>%
       mutate(sources = "report") %>%
@@ -136,14 +148,72 @@ try({
   
   togetstuff <- last7 %>% select(page_id , contains("amount")) %>% 
     set_names("page_id", "spend") %>% 
-    mutate(spend = as.numeric(spend)) %>% 
+    mutate(spend = parse_number(spend)) %>% 
     arrange(desc(spend))
   # if()
   # library(stringr)
-  jb <-
-    get_page_insights(togetstuff$page_id[1], timeframe = glue::glue("LAST_90_DAYS"), include_info = "targeting_info")
+
   
-  new_ds <- jb %>% arrange(ds) %>% slice(1) %>% pull(ds)
+  # }
+  for (i in 1:length(togetstuff$page_id)) {
+    # Get insights for the current page ID
+    jb <- get_page_insights(
+      togetstuff$page_id[i], 
+      timeframe = glue::glue("LAST_90_DAYS"), 
+      include_info = "targeting_info"
+    )
+    
+    # Check if `jb` is not NULL
+    if (!is.null(jb)) {
+      # Extract the `new_ds` value
+      new_ds <- jb %>% 
+        arrange(ds) %>% 
+        slice(1) %>% 
+        pull(ds)
+      
+      # Break the loop if `new_ds` is successfully assigned
+      if (!is.null(new_ds)) {
+        # message("New `ds` found, breaking the loop.")
+        break
+      }
+    }
+  }
+
+  to_get <- latest %>%
+    filter(day == new_ds) %>%
+    filter(str_detect(timeframe, tf))
+
+  if (nrow(to_get) != 0) {
+    download.file(
+      paste0(
+        "https://github.com/favstats/meta_ad_reports/releases/download/",
+        the_cntry,
+        "-",
+        to_get$timeframe,
+        "/",
+        to_get$file_name
+      ),
+      destfile = "report.rds"
+    )
+    
+    last7 <- readRDS("report.rds") %>%
+      mutate(sources = "report") %>%
+      mutate(party = "unknown")
+    
+    file.remove("report.rds")
+    
+    togetstuff <-
+      last7 %>% select(page_id , contains("amount")) %>%
+      set_names("page_id", "spend") %>%
+      mutate(spend = parse_number(spend)) %>%
+      arrange(desc(spend))
+    
+    report_matched = T
+  } else {
+    report_matched = F
+    
+  }
+  
   
   # new_ds <- "2000-01-01"
   
@@ -644,27 +714,40 @@ TELEGRAM_GROUP_ID <- Sys.getenv("TELEGRAM_GROUP_ID")
 
 # Function to log final statistics with Telegram integration
 log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
-                                 the_rows_to_be_checked,election_dat, new_elex,
-                                 pushed_successfully) {
+                                 the_rows_to_be_checked, election_dat, new_elex,
+                                 pushed_successfully, togetstuff, report_matched) {
   # Check if ds was already present
-  ds_present <- ifelse(new_ds == latest_ds, "✅ Yes", "❌ No")
+  ds_present <- ifelse(new_ds == latest_ds, "Yes", "No")
   
   # Calculate statistics
   total_rows <- length(unique(election_dat$page_id))
   new_rows <- length(unique(new_elex$page_id))
   lag_days <- as.numeric(Sys.Date() - lubridate::ymd(new_ds))
   
+  # Spending coverage statistics
+  page_ids_in_togetstuff <- sum(togetstuff$page_id %in% election_dat$page_id)
+  total_spend_in_togetstuff <- sum(togetstuff$spend, na.rm = TRUE)
+  election_dat <- distinct(election_dat, page_id, .keep_all = T)
+  covered_spend <- sum(election_dat$amount_spent[election_dat$page_id %in% togetstuff$page_id], na.rm = TRUE)
+  
+  spend_coverage_pct <- round((covered_spend / total_spend_in_togetstuff) * 100)
+  coverage_status <- ifelse(spend_coverage_pct == 100, "✅", "❌")
+  
   # Check GitHub push status
-  push_status <- pushed_successfully
+  push_status <- ifelse(pushed_successfully, "✅ Yes", "❌ No")
+  report_status <- ifelse(report_matched, "✅ Yes", "❌ No")
   
   # Construct details message
   details <- glue::glue(
-    "   📌 *DS Already Present:* {ds_present}\n",
-    "   🔋 *Page IDs Checked:* {the_rows_to_be_checked}\n",
-    "   📊 *Total Page IDs:* {total_rows}\n",
-    "   ➕ *New Page IDs Added:* {new_rows}\n",
-    "   🕒 *Days Lagging:* {lag_days} days\n",
-    "   🚀 *GitHub Push Successful:* {push_status}"
+    "   \t\t📌 *DS Already Present:* {ds_present}\n",
+    "   \t\t🔋 *Page IDs Checked:* {the_rows_to_be_checked}\n",
+    "   \t\t📊 *Total Page IDs:* {total_rows}\n",
+    "   \t\t➕ *New Page IDs Added:* {new_rows}\n",
+    "   \t\t🕒 *Days Lagging:* {lag_days} days\n",
+    "   \t\t🚀 *GitHub Push Successful:* {push_status}\n",
+    "   \t\t😎 *Report Matched:* {report_status}\n",
+    "   \t\t🔍 *Page IDs Present (of Report):* {page_ids_in_togetstuff}/{nrow(togetstuff)}\n",
+    "   \t\t💰 *Spending Coverage:* {covered_spend}/{total_spend_in_togetstuff} ({spend_coverage_pct}% {coverage_status})"
   )
   
   # Construct the full message
@@ -679,11 +762,13 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   # Send the message to Telegram
   url <- paste0("https://api.telegram.org/bot", TELEGRAM_BOT_ID, "/sendMessage")
   out <<- httr::POST(url, body = list(chat_id = TELEGRAM_GROUP_ID, text = the_message, parse_mode = "Markdown"), encode = "form")
-  if(httr::http_error(out)){
+  if (httr::http_error(out)) {
     print(httr::content(out))
   }
 }
 
+try({
+  
 # Example integration (call this after processing):
 log_final_statistics(
   stage = "Process Complete",
@@ -694,8 +779,11 @@ log_final_statistics(
   the_rows_to_be_checked = the_rows_to_be_checked,
   election_dat = election_dat,
   new_elex = new_elex,
-  pushed_successfully = the_status_code
+  pushed_successfully = the_status_code,
+  togetstuff = togetstuff,
+  report_matched = report_matched
 )
+})
 
 
 

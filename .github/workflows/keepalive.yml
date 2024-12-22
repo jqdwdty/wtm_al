@@ -2,10 +2,6 @@ name: Keepalive Workflow
 on:
   schedule:
     - cron: "0 0 * * 0" # Weekly on Sundays
-  push:
-    branches:
-      - master
-      - main      
       
 permissions:
   actions: write
