@@ -764,6 +764,24 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
     "{details}"
   )
   
+  print(the_message)
+  
+  print(list(
+    ds_present = ds_present,
+    the_rows_to_be_checked = the_rows_to_be_checked,
+    total_rows = total_rows,
+    new_rows = new_rows,
+    lag_days = lag_days,
+    push_status = push_status,
+    report_status = report_status,
+    page_ids_in_togetstuff = page_ids_in_togetstuff,
+    nrow_togetstuff = nrow(togetstuff),
+    covered_spend = covered_spend,
+    total_spend_in_togetstuff = total_spend_in_togetstuff,
+    spend_coverage_pct = spend_coverage_pct,
+    coverage_status = coverage_status
+  ))
+  
   # Send the message to Telegram
   url <- paste0("https://api.telegram.org/bot", TELEGRAM_BOT_ID, "/sendMessage")
   out <<- httr::POST(url, body = list(chat_id = TELEGRAM_GROUP_ID, text = the_message, parse_mode = "Markdown"), encode = "form")
