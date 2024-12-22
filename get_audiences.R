@@ -717,6 +717,9 @@ if(!exists("the_status_code")){
 TELEGRAM_BOT_ID <- Sys.getenv("TELEGRAM_BOT_ID")
 TELEGRAM_GROUP_ID <- Sys.getenv("TELEGRAM_GROUP_ID")
 
+stringr::str_count(TELEGRAM_BOT_ID)
+stringr::str_count(TELEGRAM_GROUP_ID)
+
 # Function to log final statistics with Telegram integration
 log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
                                  the_rows_to_be_checked, election_dat, new_elex,
@@ -783,8 +786,8 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   ))
   
   # Send the message to Telegram
-  url <- paste0("https://api.telegram.org/bot", TELEGRAM_BOT_ID, "/sendMessage")
-  out <<- httr::POST(url, body = list(chat_id = TELEGRAM_GROUP_ID, text = the_message, parse_mode = "Markdown"), encode = "form")
+  url <- paste0("https://api.telegram.org/bot", Sys.getenv("TELEGRAM_BOT_ID"), "/sendMessage")
+  out <<- httr::POST(url, body = list(chat_id = Sys.getenv("TELEGRAM_GROUP_ID"), text = the_message, parse_mode = "Markdown"), encode = "form")
   if (httr::http_error(out)) {
     print(httr::content(out))
     print(httr::headers(out))
