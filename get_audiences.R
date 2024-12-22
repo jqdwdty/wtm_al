@@ -58,16 +58,40 @@ try({
       )
   )
   if (!(Sys.info()[["effective_user"]] %in% c("fabio", "favstats"))) {
-    suppressMessages(
-      suppressWarnings(
-        install.packages(
-          "arrow", 
-          repos = "https://packagemanager.rstudio.com/all/__linux__/focal/latest", 
-          quiet = TRUE
+    # Comprehensive quiet installation for both package and Arrow bindings
+    quiet_install_arrow <- function() {
+      tryCatch({
+        # Suppress output for package installation
+        suppressMessages(
+          suppressWarnings(
+            install.packages(
+              "arrow", 
+              repos = "https://packagemanager.rstudio.com/all/__linux__/focal/latest", 
+              quiet = TRUE
+            )
+          )
         )
-      )
-    )
-    arrow::install_arrow(verbose = F) # verbose output to debug install errors
+        message("✅ 'arrow' package installed successfully.")
+        
+        # Suppress output for Arrow bindings installation
+        invisible(
+          capture.output(
+            suppressMessages(
+              suppressWarnings(
+                arrow::install_arrow(verbose = FALSE)
+              )
+            ),
+            file = "/dev/null"
+          )
+        )
+        message("✅ Arrow bindings installed successfully.")
+      }, error = function(e) {
+        message(glue::glue("❌ Error during installation: {e$message}"))
+      })
+    }
+    
+    # Run the installation process
+    quiet_install_arrow()
   }
   # print(arrow::arrow_info())
   # print("##### did you install arrow? #####")
