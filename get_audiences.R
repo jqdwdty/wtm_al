@@ -70,7 +70,7 @@ try({
   if (Sys.info()[["effective_user"]] %in% c("fabio", "favstats")) {
     ### CHANGE ME WHEN LOCAL!
     tf <- "30"
-    the_cntry <- "US"
+    the_cntry <- "AL"
     print(paste0("TF: ", tf))
     print(paste0("cntry: ", sets))
     
@@ -604,6 +604,10 @@ try({
   
   print(file.exists(paste0(the_date, ".parquet")))
   
+  election_dat <- election_dat %>% filter(is.na(no_data))  
+  latest_elex <- latest_elex %>% filter(is.na(no_data))
+
+  
   if(!(identical(latest_elex, election_dat))){
     
     print("################ UPLOAD FILE ################")
@@ -678,7 +682,6 @@ if(!exists("the_status_code")){
 } 
 
 
-election_dat <- election_dat %>% filter(is.na(no_data))
 
 
 # Telegram bot setup
@@ -693,8 +696,8 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   ds_present <- ifelse(new_ds == latest_ds, "✅ Yes", "❌ No")
   
   # Calculate statistics
-  total_rows <- nrow(unique(election_dat$page_id))
-  new_rows <- nrow(unique(election_dat$page_id)) - nrow(unique(new_elex$page_id))
+  total_rows <- length(unique(election_dat$page_id))
+  new_rows <- length(unique(new_elex$page_id))
   lag_days <- as.numeric(Sys.Date() - lubridate::ymd(new_ds))
   
   # Check GitHub push status
@@ -702,7 +705,6 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   
   # Construct details message
   details <- glue::glue(
-    "🌟 *Final Statistics:*\n",
     "   📌 *DS Already Present:* {ds_present}\n",
     "   🔋 *Page IDs Checked:* {the_rows_to_be_checked}\n",
     "   📊 *Total Page IDs:* {total_rows}\n",
@@ -712,7 +714,7 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   )
   
   # Construct the full message
-  message <- glue::glue(
+  the_message <- glue::glue(
     "🔹 *{stage}* 🔹\n",
     "🌍 *Country:* {cntry}\n",
     "⏳ *Timeframe:* {tf}\n",
@@ -722,7 +724,7 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   
   # Send the message to Telegram
   url <- paste0("https://api.telegram.org/bot", TELEGRAM_BOT_ID, "/sendMessage")
-  httr::POST(url, body = list(chat_id = TELEGRAM_GROUP_ID, text = message, parse_mode = "Markdown"), encode = "form")
+  httr::POST(url, body = list(chat_id = TELEGRAM_GROUP_ID, text = the_message, parse_mode = "Markdown"), encode = "form")
 }
 
 # Example integration (call this after processing):
@@ -737,7 +739,7 @@ log_final_statistics(
   new_elex = new_elex,
   pushed_successfully = the_status_code
 )
-
+debugonce(log_final_statistics)
 
 
 print("################ VERY END ################")
