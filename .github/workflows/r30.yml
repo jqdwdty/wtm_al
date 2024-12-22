@@ -1,10 +1,11 @@
 name: "30 Timeframe"
 on:
   schedule:
-    - cron: '0 5,18 * * *'
+    - cron: '0 0,3,6,9,12,15,18,21 * * *'
   push:
     branches:
       - master
+      - main      
       
 jobs:
   update-data:
