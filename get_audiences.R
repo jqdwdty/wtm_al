@@ -701,7 +701,7 @@ if(!exists("the_rows_to_be_checked")){
   the_rows_to_be_checked <- tibble()
 } 
 
-election_dat <- election_dat %>% filter(is.na(election_dat))
+election_dat <- election_dat %>% filter(is.na(no_data))
 
 
 # Telegram bot setup
