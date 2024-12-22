@@ -1,29 +1,27 @@
-# Get command-line arguments
-# tf <- commandArgs(trailingOnly = TRUE)
-# rate_limit <<- F
-
-# library(metatargetr)
-# 
-# get_ad_snapshots("3107592112807842", download = T, hashing = T, mediadir = "data/media")
 
 
 try({
 
   outcome <- commandArgs(trailingOnly = TRUE)
   
-  sets <- list()
   tf <- outcome[1]
   the_cntry <- outcome[2]
   # here::i_am("wtm_mx.Rproj")
   
   print(outcome)
   
-  # setwd("template")
-  # getwd()
+  if (Sys.info()[["effective_user"]] %in% c("fabio", "favstats")) {
+    ### CHANGE ME WHEN LOCAL!
+    tf <- "30"
+    the_cntry <- "AL"
+    print(paste0("TF: ", tf))
+    print(paste0("cntry: ", the_cntry))
+    
+  }
+  
+  
   source("utils.R")
-  # ?get_targeting
-  # get_targeting("41459763029", timeframe = "LAST_90_DAYS")
-  # debugonce(get_targeting)
+  
   
   library(httr)
   library(httr2)
@@ -34,21 +32,6 @@ try({
   library(openssl)
   library(jsonlite)
   
-  
-  saveRDS(runif(1), file = "proxy.rds")
-  
-  
-
-  # print(arrow::arrow_info())
-  # print("##### did you install arrow? #####")
-  
-  # pacman::p_load(arrow)
-  
-  # sets <- jsonlite::fromJSON("settings.json")
-  #
-  # title_txt <- read_lines("_site/_quarto.yml")
-  # title_txt[which(str_detect(title_txt, "title"))[1]] <-  glue::glue('  title: "{sets$dashboard}"')
-  # write_lines(title_txt, "_site/_quarto.yml")
   
   eu_countries <- c("AT", "BE", "BG", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", 
                     "FR", "GR", "HR", "HU", "IE", "IT", "LT", "LU", "LV", "MT", 
@@ -62,36 +45,7 @@ try({
     sample_n(n()) %>% 
     mutate(iso2c = fct_relevel(iso2c, eu_countries)) %>% 
     arrange(iso2c)
-  # filter(iso2c %in% c("MT", "NP", "AM", "FR", "XK"))
-  # slice(1:5)
-  
-  # full_cntry_list$iso2c %>% dput()
-  
-  if (Sys.info()[["effective_user"]] %in% c("fabio", "favstats")) {
-    ### CHANGE ME WHEN LOCAL!
-    tf <- "30"
-    the_cntry <- "AL"
-    print(paste0("TF: ", tf))
-    print(paste0("cntry: ", sets))
-    
-  }
-  
-  
-  # for (cntryy in full_cntry_list$iso2c) {
-  #   the_cntry <-  cntryy
-  #   print(the_cntry)
-  #   
-  #   if(!exists("rate_limit")){
-  #     rate_limit <<- F
-  #   } else {
-  #     
-  #     if(length(rate_limit)==0)  rate_limit <<- F
-  #     
-  #   }
-  
-  # if(rate_limit){
-  #   break
-  # }
+
   
   print("################ CHECK LATEST REPORT ################")
   
@@ -108,7 +62,7 @@ try({
           ))
       }) %>%
       unlist() %>%
-      .[str_detect(., "last_90_days")] %>%
+      # .[str_detect(., "last_90_days")] %>%
       # .[100:120] %>%
       map_dfr( ~ {
         the_assets <-
@@ -153,7 +107,7 @@ try({
       filter(str_detect(file_name, "rds")) %>%
       mutate(day  = str_remove(file_name, "\\.rds|\\.zip|\\.parquet") %>% lubridate::ymd()) %>%
       arrange(desc(day)) %>%
-      group_by(country) %>%
+      group_by(country, timeframe) %>%
       slice(1) %>%
       ungroup()
     
@@ -724,7 +678,10 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   
   # Send the message to Telegram
   url <- paste0("https://api.telegram.org/bot", TELEGRAM_BOT_ID, "/sendMessage")
-  httr::POST(url, body = list(chat_id = TELEGRAM_GROUP_ID, text = the_message, parse_mode = "Markdown"), encode = "form")
+  out <<- httr::POST(url, body = list(chat_id = TELEGRAM_GROUP_ID, text = the_message, parse_mode = "Markdown"), encode = "form")
+  if(httr::http_error(out)){
+    print(httr::content(out))
+  }
 }
 
 # Example integration (call this after processing):
@@ -739,7 +696,7 @@ log_final_statistics(
   new_elex = new_elex,
   pushed_successfully = the_status_code
 )
-debugonce(log_final_statistics)
+
 
 
 print("################ VERY END ################")
