@@ -500,6 +500,8 @@ try({
         filter(page_id %in% last7$page_id) %>% 
         mutate(total_n = n())
       
+      the_rows_to_be_checked <- nrow(scrape_dat)
+      
       print(paste0("Number of remaining pages to check: ", nrow(scrape_dat)))
       
       ### save seperately
@@ -526,6 +528,10 @@ try({
           enddat$page_id <- enddat$internal_id
         }
         
+        new_elex <- enddat
+        
+        print(glue::glue("Old Number of Rows: {nrow(new_elex)}"))
+        
         election_dat  <- enddat %>%
           mutate_at(vars(contains("total_spend_formatted")), ~ parse_number(as.character(.x))) %>%
           # rename(page_id = internal_id) %>%
@@ -534,6 +540,8 @@ try({
           distinct()
         
         dir.create(paste0("historic/",  as.character(new_ds)), recursive = T)
+        
+        print(glue::glue("New Number of Rows: {nrow(election_dat)}"))
         
         
         arrow::write_parquet(election_dat, paste0(current_date, ".parquet"))
@@ -550,6 +558,8 @@ try({
       
       print(paste0("Number of pages to check: ", nrow(scrape_dat)))
       
+      the_rows_to_be_checked <- nrow(scrape_dat)
+      
       # debugonce(scraper)
       ### save seperately
       election_dat <- all_dat %>%
@@ -563,8 +573,12 @@ try({
         election_dat$page_id <- election_dat$internal_id
       }
       
+
       election_dat <- election_dat %>% 
         left_join(all_dat)
+      
+      
+      print(glue::glue("Number of Rows: {nrow(election_dat)}"))
       
       dir.create(paste0("historic/",  as.character(new_ds)), recursive = T)
       
@@ -624,18 +638,19 @@ try({
     
     print("################ UPLOAD FILE ################")
     
+    
     try({
       # print(paste0(the_date, ".rds"))
       # print(the_tag)
       # debugonce(pb_upload_file_fr)
-      pb_upload_file_fr(
+      rsd <- pb_upload_file_fr(
         paste0(the_date, ".parquet"),
         repo = "favstats/meta_ad_targeting",
         tag = the_tag,
         releases = releases
       )
       # pb_upload_file_fr(paste0(the_date, ".zip"), repo = "favstats/meta_ad_reports", tag = the_tag, releases = full_repos)
-      
+      the_status_code <- httr::status_code(rsd)
     })
     
     print(paste0("################ UPLOADED FILE ################: ", the_cntry))
@@ -675,6 +690,77 @@ try({
   
   
 })
+
+if(!exists("new_elex")){
+  new_elex <- tibble()
+} else {
+  new_elex <- new_elex %>% filter(is.na(no_data))
+}
+
+if(!exists("the_rows_to_be_checked")){
+  the_rows_to_be_checked <- tibble()
+} 
+
+election_dat <- election_dat %>% filter(is.na(election_dat))
+
+
+# Telegram bot setup
+TELEGRAM_BOT_ID <- Sys.getenv("TELEGRAM_BOT_ID")
+TELEGRAM_GROUP_ID <- Sys.getenv("TELEGRAM_GROUP_ID")
+
+# Function to log final statistics with Telegram integration
+log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
+                                 the_rows_to_be_checked,election_dat, new_elex,
+                                 pushed_successfully) {
+  # Check if ds was already present
+  ds_present <- ifelse(new_ds == latest_ds, "✅ Yes", "❌ No")
+  
+  # Calculate statistics
+  total_rows <- nrow(unique(election_dat$page_id))
+  new_rows <- nrow(unique(election_dat$page_id)) - nrow(unique(new_elex$page_id))
+  lag_days <- as.numeric(Sys.Date() - lubridate::ymd(new_ds))
+  
+  # Check GitHub push status
+  push_status <- pushed_successfully
+  
+  # Construct details message
+  details <- glue::glue(
+    "🌟 *Final Statistics:*\n",
+    "   📌 *DS Already Present:* {ds_present}\n",
+    "   🔋 *Page IDs Checked:* {the_rows_to_be_checked}\n",
+    "   📊 *Total Page IDs:* {total_rows}\n",
+    "   ➕ *New Page IDs Added:* {new_rows}\n",
+    "   🕒 *Days Lagging:* {lag_days} days\n",
+    "   🚀 *GitHub Push Successful:* {push_status}"
+  )
+  
+  # Construct the full message
+  message <- glue::glue(
+    "🔹 *{stage}* 🔹\n",
+    "🌍 *Country:* {cntry}\n",
+    "⏳ *Timeframe:* {tf}\n",
+    "🕒 *Time:* {Sys.time()}\n",
+    "{details}"
+  )
+  
+  # Send the message to Telegram
+  url <- paste0("https://api.telegram.org/bot", TELEGRAM_BOT_ID, "/sendMessage")
+  httr::POST(url, body = list(chat_id = TELEGRAM_GROUP_ID, text = message, parse_mode = "Markdown"), encode = "form")
+}
+
+# Example integration (call this after processing):
+log_final_statistics(
+  stage = "Process Complete",
+  tf = tf,
+  cntry = the_cntry,
+  new_ds = new_ds,
+  latest_ds = latest_ds,
+  the_rows_to_be_checked = the_rows_to_be_checked,
+  election_dat = election_dat,
+  new_elex = new_elex,
+  pushed_successfully = the_status_code
+)
+
 
 
 print("################ VERY END ################")
