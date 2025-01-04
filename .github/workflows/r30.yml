@@ -5,15 +5,15 @@ on:
       - master
       - main
   schedule:
-    - cron: '0 12 * * *'
+      - cron: '0 12 * * *'
 
 jobs:
   update-data:
-    - cron: '0 1 * * *'
+    - cron: '0 2 * * *'
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
+    - cron: '0 2 * * *'
       GITHUB_PAT: ${{ secrets.GH_PAT }}      
       TELEGRAM_BOT_ID: ${{ secrets.TELEGRAM_BOT_ID }}
       TELEGRAM_GROUP_ID: ${{ secrets.TELEGRAM_GROUP_ID }}
