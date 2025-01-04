@@ -1,4 +1,7 @@
 
+# Error in retrieve_reports_data(the_cntry, to_get$timeframe, to_get$day) : 
+#   `timeframe` must be one of: 'yesterday', '7', '30', '90', or 'lifelong'.
+# Error : object 'latest_ds' not found
 
 try({
   
@@ -6,8 +9,7 @@ try({
   
   tf <- outcome[1]
   the_cntry <- outcome[2]
-  # here::i_am("wtm_mx.Rproj")
-  
+
   print(outcome)
   
   if (Sys.info()[["effective_user"]] %in% c("fabio", "favstats")) {
@@ -123,8 +125,8 @@ try({
     filter(str_detect(timeframe, tf))
   
   if (nrow(to_get) != 0) {
-    
-    last7 <- retrieve_reports_data(the_cntry, to_get$timeframe, to_get$day)
+    # debugonce(retrieve_reports_data)
+    last7 <- get_report_db(the_cntry, readr::parse_number(to_get$timeframe), to_get$day)
     
     togetstuff <-
       last7 %>% select(page_id , contains("amount")) %>%
@@ -463,7 +465,11 @@ try({
     election_dat <- election_dat %>% filter(is.na(no_data))
   }
   
-  latest_elex <- latest_elex %>% filter(is.na(no_data))
+  if("no_data" %in% names(latest_elex)){
+    latest_elex <- latest_elex %>% filter(is.na(no_data))
+  }
+  
+ 
   
   
   if(!(identical(latest_elex, election_dat))){
@@ -573,6 +579,14 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   push_status <- ifelse(pushed_successfully, "✅ Yes", "❌ No")
   report_status <- ifelse(report_matched, "✅ Yes", "❌ No")
   
+  
+  if(page_ids_in_togetstuff==nrow(togetstuff) | new_rows == 0){
+    should_continue <- update_workflow_schedule(F)
+  } else {
+    should_continue <- update_workflow_schedule(T)
+  }
+  should_continue <- ifelse(should_continue, "✅ Yes", "❌ No")
+  
   # Construct details message
   details <- glue::glue(
     "   \t\t📌 *Newest DS:* {new_ds}\n",
@@ -585,7 +599,9 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
     "   \t\t🚀 *GitHub Push Successful:* {push_status}\n",
     "   \t\t😎 *Report Matched:* {report_status}\n",
     "   \t\t🔍 *Page IDs Present (of Report):* {page_ids_in_togetstuff}/{nrow(togetstuff)}\n",
-    "   \t\t💰 *Spending Coverage:* {covered_spend}/{total_spend_in_togetstuff} ({spend_coverage_pct}% {coverage_status})"
+    "   \t\t💰 *Spending Coverage:* {covered_spend}/{total_spend_in_togetstuff} ({spend_coverage_pct}% {coverage_status})\n",
+    "   \t\t📌 *Continue Today:* {should_continue}\n",
+    "   \t\t💰 *Source:* jqdwdty"
   )
   
   # Construct the full message
@@ -646,11 +662,7 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   #     paste(covered_spend, "/", total_spend_in_togetstuff, "(", spend_coverage_pct, "%", coverage_status, ")")
   #   )
   # )
-  if(page_ids_in_togetstuff==nrow(togetstuff) | new_rows == 0){
-    update_workflow_schedule(F)
-  } else {
-    update_workflow_schedule(T)
-  }
+
   
 }
 
@@ -663,11 +675,12 @@ update_workflow_schedule <- function(should_continue = TRUE) {
   cron_line_idx <- which(str_detect(workflow_content, "cron:"))
   
   if(should_continue) {
-    # If we should continue, set normal hourly schedule
+    print("should continue, set normal hourly schedule")
     new_cron <- "    - cron: '0 1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *'"
   } else {
-    # If we're done for the day, set to start fresh tomorrow at 1 AM
-    new_cron <- glue::glue("    - cron: '0 {sample(1:23, 1)} * * *'")
+    settimer <- sample(1:12, 1)
+    print(glue::glue("we're done for the day, set to start fresh tomorrow at {settimer}"))
+    new_cron <- glue::glue("    - cron: '0 {settimer} * * *'")
   }
   
   # Update the cron line
@@ -676,6 +689,7 @@ update_workflow_schedule <- function(should_continue = TRUE) {
   # Write back to file
   writeLines(workflow_content, glue::glue(".github/workflows/r{tf}.yml"))
   
+  return(should_continue)
   # # Commit and push the changes using gh CLI
   # system("git config --global user.email 'action@github.com'")
   # system("git config --global user.name 'GitHub Action'")

@@ -1,8 +1,12 @@
-name: "7 Timeframe"
+name: "30 Timeframe"
 on:
   schedule:
-    - cron: '0 16 * * *'
-
+    - cron: '0 5 * * *'
+  push:
+    branches:
+      - master
+      - main      
+      
 jobs:
   update-data:
     name: Update Dashboard
@@ -84,4 +88,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          git push --force origin master
+          for branch in master main; do
+            if git show-ref --verify --quiet refs/heads/$branch; then
+              git push --force origin $branch
+            else
+              echo "Branch '$branch' does not exist. Skipping push."
+            fi
+          done
