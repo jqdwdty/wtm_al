@@ -709,7 +709,12 @@ update_workflow_schedule <- function(should_continue = TRUE, thetf = tf, verbose
   # Handle `should_continue` logic
   if (should_continue) {
     if (verbose) print("Workflow should continue. Ensuring 'push' block exists and removing cron.")
+    
     # Remove the cron line if it exists
+    # if (length(cron_line_idx) > 0) {
+    #   workflow_content <- workflow_content[-cron_line_idx]
+    #   if (verbose) print("Removed 'cron' schedule.")
+    # }
     
     # Add `push` block if it doesn't exist
     if (length(push_start_idx) == 0) {
@@ -727,14 +732,14 @@ update_workflow_schedule <- function(should_continue = TRUE, thetf = tf, verbose
       workflow_content <- workflow_content[-(push_start_idx:branches_end_idx)]
     }
     
-    # Update or add the cron schedule
-    if (length(cron_line_idx) > 0) {
-      workflow_content[cron_line_idx] <- new_cron
-      if (verbose) print(glue::glue("Updated existing 'cron' schedule to: {new_cron}"))
-    } else {
+    # Add the cron schedule only in the `on:` block
+    if (length(cron_line_idx) == 0) {
       on_idx <- which(str_detect(workflow_content, "^on:"))
       workflow_content <- append(workflow_content, new_cron, after = on_idx)
       if (verbose) print(glue::glue("Added new 'cron' schedule: {new_cron}"))
+    } else {
+      workflow_content[cron_line_idx] <- new_cron
+      if (verbose) print(glue::glue("Updated existing 'cron' schedule to: {new_cron}"))
     }
   }
   
