@@ -1,11 +1,14 @@
 name: "90 Timeframe"
 on:
+  push:
+    branches:
+      - master
+      - main
   schedule:
-    - cron: '0 5 * * *'
+    - cron: '0 12 * * *'
 
 jobs:
   update-data:
-    name: Update Dashboard
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -95,9 +98,6 @@ jobs:
         env:
           GITHUB_PAT: ${{ secrets.GH_PAT }}
         run: |
-          # Fetch latest changes
-          git fetch --all
-
           # Determine if 'main' or 'master' exists
           if git show-ref --verify --quiet refs/heads/main; then
             TARGET_BRANCH="main"
@@ -107,12 +107,11 @@ jobs:
             echo "Neither 'main' nor 'master' branch exists. Exiting."
             exit 1
           fi
-
-          # Check out the target branch and sync workflows
-          git checkout $TARGET_BRANCH
-          git checkout origin/$TARGET_BRANCH -- .github/workflows
-          git add .github/workflows
-          git commit -m "chore: sync workflows with $TARGET_BRANCH" || echo "No workflow changes to commit"
-
+        
+          # Stage and commit changes if there are any
+          git add -A
+          git commit -m "Automated update from workflow" || echo "No changes to commit"
+        
           # Force push changes to the determined branch
           git push --force origin $TARGET_BRANCH
+        
