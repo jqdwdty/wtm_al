@@ -748,9 +748,9 @@ update_workflow_schedule <- function(should_continue = TRUE, thetf = tf, verbose
   writeLines(workflow_content, workflow_file)
   
   if (verbose) print("Workflow update complete.")
-  workflow_file <- glue::glue(".github/workflows/r{thetf}.yml")
+  workflow_content <- readLines(workflow_file)
   
-  if (verbose) print(workflow_file)
+  if (verbose) print(workflow_content)
   
   return(should_continue)
 }
