@@ -708,12 +708,14 @@ update_workflow_schedule <- function(should_continue = TRUE, thetf = tf) {
     if (length(push_start_idx) > 0) {
       workflow_content <- workflow_content[-(push_start_idx:branches_end_idx)]
     }
+    
+    # Update the cron schedule
+    if (length(cron_line_idx) > 0) {
+      workflow_content[cron_line_idx] <- new_cron
+    }
   }
   
-  # Update the cron schedule
-  if (length(cron_line_idx) > 0) {
-    workflow_content[cron_line_idx] <- new_cron
-  }
+
   
   # Write the updated content back to the workflow file
   writeLines(workflow_content, workflow_file)
