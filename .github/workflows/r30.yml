@@ -1,14 +1,17 @@
 name: "30 Timeframe"
 on:
+  push:
+    branches:
+      - master
+      - main
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 12 * * *'
 
 jobs:
   update-data:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     env:
+      TF: "30"  # Timeframe variable for easy global reference
       GITHUB_PAT: ${{ secrets.GH_PAT }}      
       TELEGRAM_BOT_ID: ${{ secrets.TELEGRAM_BOT_ID }}
       TELEGRAM_GROUP_ID: ${{ secrets.TELEGRAM_GROUP_ID }}
@@ -80,20 +83,35 @@ jobs:
       - name: "Install arrow"
         run: Rscript 'arrow.R'
 
-      - name: "Script - Run"
-        run: Rscript 'get_audiences.R' 30 "AL"
+      - name: Initialize or Reset Resume Count
+        run: |
+          # Check if workflow file has a push block
+          if grep -q "push:" .github/workflows/r${TF}.yml; then
+            if [ ! -f resume_count_${TF}.txt ]; then
+              echo 0 > resume_count_${TF}.txt
+            fi
+            echo "RESUME_COUNT=$(cat resume_count_${TF}.txt)" >> $GITHUB_ENV
+          else
+            echo 0 > resume_count_${TF}.txt
+            echo "RESUME_COUNT=0" >> $GITHUB_ENV
+            echo "Push block not found. Resetting resume count to 0."
+          fi
 
-      - name: Commit changes
+      - name: "Script - Run"
+        run: |
+          result=$(Rscript 'get_audiences.R' ${TF} "AL")
+          if [[ "$result" == *"No changes"* ]]; then
+            RESUME_COUNT=$((RESUME_COUNT + 1))
+            echo $RESUME_COUNT > resume_count_${TF}.txt
+            echo "Resume count increased to $RESUME_COUNT"
+          fi
+        env:
+          RESUME_COUNT: ${{ env.RESUME_COUNT }}
+
+      - name: Commit changes and Force Push Changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Update data - $(date +"%Y-%m-%d %H:%M:%S")" || echo "No changes to commit"
-
-      - name: Sync and Force Push Changes
-        env:
-          GITHUB_PAT: ${{ secrets.GH_PAT }}
-        run: |
           # Determine if 'main' or 'master' exists
           if git show-ref --verify --quiet refs/heads/main; then
             TARGET_BRANCH="main"
@@ -104,10 +122,9 @@ jobs:
             exit 1
           fi
         
-          # Stage and commit changes if there are any
+          # Stage and commit all changes, including resume count
           git add -A
-          git commit -m "Automated update from workflow" || echo "No changes to commit"
+          git commit -m "#${RESUME_COUNT} Resume ${TF} TF: $(date +"%Y-%m-%d %H:%M:%S")" || echo "No changes to commit"
         
           # Force push changes to the determined branch
           git push --force origin $TARGET_BRANCH
-        
