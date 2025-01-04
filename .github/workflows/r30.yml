@@ -1,11 +1,14 @@
 name: "30 Timeframe"
 on:
+  push:
+    branches:
+      - master
+      - main
   schedule:
     - cron: '0 12 * * *'
 
 jobs:
   update-data:
-    - cron: '0 1 * * *'
     runs-on: ubuntu-latest
     permissions:
       contents: write
