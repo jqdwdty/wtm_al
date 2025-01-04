@@ -585,6 +585,7 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   } else {
     should_continue <- update_workflow_schedule(T)
   }
+  
   should_continue <- ifelse(should_continue, "✅ Yes", "❌ No")
   
   # Construct details message
