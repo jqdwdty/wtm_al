@@ -667,9 +667,10 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   
 }
 
-update_workflow_schedule <- function(should_continue = TRUE, thetf = tf) {
+update_workflow_schedule <- function(should_continue = TRUE, thetf = tf, verbose = TRUE) {
   # Read the current workflow file
   workflow_file <- glue::glue(".github/workflows/r{thetf}.yml")
+  if (verbose) print(glue::glue("Reading workflow file: {workflow_file}"))
   workflow_content <- readLines(workflow_file)
   
   # Define the `push` block
@@ -687,43 +688,65 @@ update_workflow_schedule <- function(should_continue = TRUE, thetf = tf) {
   } else {
     integer(0)  # No `push` block exists
   }
+  if (verbose) {
+    if (length(push_start_idx) > 0) {
+      print("Found existing 'push' block.")
+    } else {
+      print("No 'push' block found.")
+    }
+  }
   
   # Find the cron line
   cron_line_idx <- which(str_detect(workflow_content, "cron:"))
+  if (verbose) {
+    if (length(cron_line_idx) > 0) {
+      print(glue::glue("Found cron line at index {cron_line_idx}."))
+    } else {
+      print("No cron line found. This may cause issues.")
+    }
+  }
   
+  # Handle `should_continue` logic
   if (should_continue) {
-    print("should continue, ensuring 'push' block exists")
-    # new_cron <- "    - cron: '0 1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *'"
+    if (verbose) print("Workflow should continue. Ensuring 'push' block exists and removing cron.")
+    # Remove the cron line if it exists
     
     # Add `push` block if it doesn't exist
     if (length(push_start_idx) == 0) {
-      workflow_content <- append(workflow_content, push_block, after = cron_line_idx)
+      if (verbose) print("Adding 'push' block.")
+      workflow_content <- append(workflow_content, push_block, after = which(str_detect(workflow_content, "^on:")))
     }
   } else {
     settimer <- sample(1:12, 1)
-    print(glue::glue("we're done for the day, set to start fresh tomorrow at {settimer}"))
+    if (verbose) print(glue::glue("Workflow will pause for the day. Setting cron to start at {settimer}:00 tomorrow."))
     new_cron <- glue::glue("    - cron: '0 {settimer} * * *'")
     
     # Remove `push` block if it exists
     if (length(push_start_idx) > 0) {
+      if (verbose) print("Removing existing 'push' block.")
       workflow_content <- workflow_content[-(push_start_idx:branches_end_idx)]
     }
     
-    # Update the cron schedule
+    # Update or add the cron schedule
     if (length(cron_line_idx) > 0) {
       workflow_content[cron_line_idx] <- new_cron
+      if (verbose) print(glue::glue("Updated existing 'cron' schedule to: {new_cron}"))
+    } else {
+      on_idx <- which(str_detect(workflow_content, "^on:"))
+      workflow_content <- append(workflow_content, new_cron, after = on_idx)
+      if (verbose) print(glue::glue("Added new 'cron' schedule: {new_cron}"))
     }
   }
   
-
-  
   # Write the updated content back to the workflow file
+  if (verbose) print(glue::glue("Writing updated content back to: {workflow_file}"))
   writeLines(workflow_content, workflow_file)
   
+  if (verbose) print("Workflow update complete.")
   return(should_continue)
 }
 # tf <- 7
-update_workflow_schedule(T)
+# update_workflow_schedule(T)
 
 
 try({
