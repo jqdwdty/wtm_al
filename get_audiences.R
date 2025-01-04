@@ -667,40 +667,49 @@ log_final_statistics <- function(stage, tf, cntry, new_ds, latest_ds,
   
 }
 
-# Function to update GitHub Actions workflow schedule
-update_workflow_schedule <- function(should_continue = TRUE) {
+update_workflow_schedule <- function(should_continue = TRUE, thetf = tf) {
   # Read the current workflow file
-  workflow_content <- readLines(glue::glue(".github/workflows/r{tf}.yml"))
+  workflow_file <- glue::glue(".github/workflows/r{thetf}.yml")
+  workflow_content <- readLines(workflow_file)
   
-  # Find the cron schedule line
-  cron_line_idx <- which(str_detect(workflow_content, "cron:"))
+  # Define the `push` block
+  push_block <- c(
+    "  push:",
+    "    branches:",
+    "      - master",
+    "      - main"
+  )
   
-  if(should_continue) {
-    print("should continue, set normal hourly schedule")
-    new_cron <- "    - cron: '0 1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *'"
+  # Locate the `push` block start and end
+  push_start_idx <- which(str_detect(workflow_content, "^  push:"))
+  branches_end_idx <- if (length(push_start_idx) > 0) {
+    push_start_idx + 3  # Assumes the block always has 3 lines
   } else {
-    settimer <- sample(1:12, 1)
-    print(glue::glue("we're done for the day, set to start fresh tomorrow at {settimer}"))
-    new_cron <- glue::glue("    - cron: '0 {settimer} * * *'")
+    integer(0)  # No `push` block exists
   }
   
-  # Update the cron line
-  workflow_content[cron_line_idx] <- new_cron
+  if (should_continue) {
+    print("should continue, ensuring 'push' block exists")
+    # Add `push` block if it doesn't exist
+    if (length(push_start_idx) == 0) {
+      cron_idx <- which(str_detect(workflow_content, "cron:"))
+      workflow_content <- append(workflow_content, push_block, after = cron_idx)
+    }
+  } else {
+    print("we're done for the day, removing 'push' block if it exists")
+    # Remove `push` block if it exists
+    if (length(push_start_idx) > 0) {
+      workflow_content <- workflow_content[-(push_start_idx:branches_end_idx)]
+    }
+  }
   
-  # Write back to file
-  writeLines(workflow_content, glue::glue(".github/workflows/r{tf}.yml"))
+  # Write the updated content back to the workflow file
+  writeLines(workflow_content, workflow_file)
   
   return(should_continue)
-  # # Commit and push the changes using gh CLI
-  # system("git config --global user.email 'action@github.com'")
-  # system("git config --global user.name 'GitHub Action'")
-  # system("git add r7.yml")
-  # system("git commit -m 'Update workflow schedule based on scraping status'")
-  # system("git push")
 }
-
 # tf <- 7
-# update_workflow_schedule(F)
+# update_workflow_schedule(T)
 
 
 try({
