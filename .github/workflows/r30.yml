@@ -9,7 +9,6 @@ on:
 
 jobs:
   update-data:
-    - cron: '0 2 * * *'
     runs-on: ubuntu-latest
     permissions:
       contents: write
