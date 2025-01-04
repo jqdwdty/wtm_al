@@ -688,19 +688,31 @@ update_workflow_schedule <- function(should_continue = TRUE, thetf = tf) {
     integer(0)  # No `push` block exists
   }
   
+  # Find the cron line
+  cron_line_idx <- which(str_detect(workflow_content, "cron:"))
+  
   if (should_continue) {
     print("should continue, ensuring 'push' block exists")
+    # new_cron <- "    - cron: '0 1,2,3,4,5,6,7,8,10,11,12,13,14,15,16,17,18,19,20,21,22,23 * * *'"
+    
     # Add `push` block if it doesn't exist
     if (length(push_start_idx) == 0) {
-      cron_idx <- which(str_detect(workflow_content, "cron:"))
-      workflow_content <- append(workflow_content, push_block, after = cron_idx)
+      workflow_content <- append(workflow_content, push_block, after = cron_line_idx)
     }
   } else {
-    print("we're done for the day, removing 'push' block if it exists")
+    settimer <- sample(1:12, 1)
+    print(glue::glue("we're done for the day, set to start fresh tomorrow at {settimer}"))
+    new_cron <- glue::glue("    - cron: '0 {settimer} * * *'")
+    
     # Remove `push` block if it exists
     if (length(push_start_idx) > 0) {
       workflow_content <- workflow_content[-(push_start_idx:branches_end_idx)]
     }
+  }
+  
+  # Update the cron schedule
+  if (length(cron_line_idx) > 0) {
+    workflow_content[cron_line_idx] <- new_cron
   }
   
   # Write the updated content back to the workflow file
@@ -709,7 +721,7 @@ update_workflow_schedule <- function(should_continue = TRUE, thetf = tf) {
   return(should_continue)
 }
 # tf <- 7
-# update_workflow_schedule(T)
+update_workflow_schedule(T)
 
 
 try({

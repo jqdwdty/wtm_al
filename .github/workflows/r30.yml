@@ -116,7 +116,7 @@ jobs:
           git checkout $TARGET_BRANCH
           git checkout origin/$TARGET_BRANCH -- .github/workflows
           git add .github/workflows
-          git commit -m "chore: sync workflows with $TARGET_BRANCH" || echo "No workflow changes to commit"
+          git commit -m "Continued Workflow: from $TARGET_BRANCH" || echo "No workflow changes to commit"
 
           # Force push changes to the determined branch
           git push --force origin $TARGET_BRANCH
